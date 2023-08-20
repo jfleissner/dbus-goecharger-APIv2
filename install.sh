@@ -2,6 +2,9 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 SERVICE_NAME=$(basename $SCRIPT_DIR)
 
+#copy existing config to backup in case of reinstall
+cp /data/dbus-goecharger/config.ini /data/dbus-goecharger/config.ini.bak
+
 # set permissions for script files
 chmod a+x $SCRIPT_DIR/restart.sh
 chmod 744 $SCRIPT_DIR/restart.sh
