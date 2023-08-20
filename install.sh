@@ -12,6 +12,10 @@ chmod 744 $SCRIPT_DIR/uninstall.sh
 chmod a+x $SCRIPT_DIR/service/run
 chmod 755 $SCRIPT_DIR/service/run
 
+#add cronjob to avoid excessive use of diskspace by signoflife
+echo "1  0  *  *  *  root  rm /data/dbus-goecharger/current.log" >> /etc/crontab
+echo 'echo "1  0  *  *  *  root  rm /data/dbus-goecharger/current.log" >> /etc/crontab' >>/data/rc.local
+
 # create sym-link to run script in deamon
 ln -s $SCRIPT_DIR/service /service/$SERVICE_NAME
 
