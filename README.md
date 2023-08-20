@@ -9,38 +9,10 @@ Idea is inspired on @fabian-lauer and @trixing project linked below, many thanks
 
 ## How it works
 ### My setup (only relevant for this script)
-- 3-Phase installation
-- Venus OS on Raspberry PI 4 4GB version 1.1 - Firmware v2.84
-  - No other devices from Victron connected
-  - Connected to Wifi netowrk "A"
-- go-eCharger hardware version 2
-  - Make sure in your go-eCharger app that api v1 is activated
-  - Connected to Wifi network "A" with a known IP
 
-### Details / Process
-What is the script doing:
-- Running as a service
-- connecting to DBus of the Venus OS `com.victronenergy.evcharger.http_{DeviceInstanceID_from_config}`
-- After successful DBus connection go-eCharger is accessed via REST-API - simply the /status is called and a JSON is returned with all details
-  A sample JSON file from Shelly 1PM can be found [here](docs/go-eCharger-status-sample.json)
-- Serial/MAC is taken from the response as device serial
-- Paths are added to the DBus with default value 0 - including some settings like name, etc
-- After that a "loop" is started which pulls go-eCharger data every 750ms from the REST-API and updates the values in the DBus
+- go-eCharger hardware version 4
+  - Make sure in your go-eCharger app that http-api v2 is activated 
 
-Thats it 😄
-
-### Restrictions
-This script until now supports reading values from the go-eCharger. Writing values is supported for  "Enable Charging", "Charging current" and "Max charging current". 
-Control of go-eCharger by the victron system in "Mode" "Auto" is not supported for now and changing the value will have no effect.
-
-
-### Pictures
-![Remote Console - Overview](img/venus-os-remote-console-overview.PNG) 
-![go-eCharger - Values](img/venus-os-goecharger.PNG)
-![go-eCharger - Values](img/venus-os-goecharger2.PNG)
-![SmartMeter - Device Details](img/venus-os-goecharger-devicedetails.PNG)
-![Victron Portal - Dashboard](img/venus-os-dashboard.PNG)
-![Victron Portal - Advanced](img/venus-os-advanced-configuration.png)
 
 ## Install & Configuration
 ### Get the code
