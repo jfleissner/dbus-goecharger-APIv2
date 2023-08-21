@@ -142,7 +142,7 @@ class DbusGoeChargerService:
         raise ConnectionError("No response from go-eCharger - %s" % (URL))
     
     json_data = request_data.json()     
-    
+    time.sleep(1)
     # check for Json
     if not json_data:
         raise ValueError("Converting response to JSON failed")
