@@ -19,9 +19,12 @@ import configparser # for config/ini file
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/dbus-systemcalc-py/ext/velib_python'))
 from vedbus import VeDbusService
 
+globalConfig = 0
+ 
 
 class DbusGoeChargerService:
   def __init__(self, servicename, paths, productname='go-eCharger', connection='go-eCharger HTTP JSON service'):
+    print("_init_")
     config = self._getConfig()
     deviceinstance = int(config['DEFAULT']['Deviceinstance'])
     hardwareVersion = int(config['DEFAULT']['HardwareVersion'])
@@ -33,11 +36,15 @@ class DbusGoeChargerService:
     
     paths_wo_unit = [
       '/Status',  # value 'car_state' 1: Ladestation bereit - kein Fahrzeug 2: Fahrzeug lädt 3: Warten aufs Fahrzeug 4: Laden beendet - Fahrzeug noch verbunden
+      '/EnableDisplay',
+      '/Autostart',
     ]
-    
+    #time.sleep(1)
+    #print("sleep")
+
     #get data from go-eCharger
     data = self._getGoeChargerData()
-
+    time.sleep(1)
     # Create the management objects, as specified in the ccgx dbus-api document
     self._dbusservice.add_path('/Mgmt/ProcessName', __file__)
     self._dbusservice.add_path('/Mgmt/ProcessVersion', 'Unkown version, and running on Python ' + platform.python_version())
@@ -55,8 +62,8 @@ class DbusGoeChargerService:
     self._dbusservice.add_path('/Connected', 1)
     self._dbusservice.add_path('/UpdateIndex', 0)
     self._dbusservice.add_path('/Position',  int(config['DEFAULT']['Position']))
-    self._dbusservice.add_path('/EnableDisplay', 0)
-    self._dbusservice.add_path('/AutoStart', 1)
+    #self._dbusservice.add_path('/EnableDisplay', 0)
+    #self._dbusservice.add_path('/AutoStart', 1)
 
     # add paths without units
     for path in paths_wo_unit:
@@ -74,21 +81,27 @@ class DbusGoeChargerService:
     self._chargingTime = 0.0
 
     # add _update function 'timer'
-    gobject.timeout_add(250, self._update) # pause 250ms before the next request
+    gobject.timeout_add(2500, self._update) # pause 2500ms before the next request
     
     # add _signOfLife 'timer' to get feedback in log every 5minutes
     gobject.timeout_add(self._getSignOfLifeInterval()*60*1000, self._signOfLife)
- 
+    
   def _getConfig(self):
-    config = configparser.ConfigParser()
-    config.read("%s/config.ini" % (os.path.dirname(os.path.realpath(__file__))))
-    return config
+    global globalConfig     
+    if globalConfig == 0:
+        config = configparser.ConfigParser()
+        print("configparser.ConfigParser ausgeführt")
+        config.read("%s/config.ini" % (os.path.dirname(os.path.realpath(__file__))))
+        print("config.read ausgeführt")
+        globalConfig = config
+    
+    return globalConfig
  
  
   def _getSignOfLifeInterval(self):
     config = self._getConfig()
     value = config['DEFAULT']['SignOfLifeLog']
-    
+   
     if not value: 
         value = 0
     
@@ -107,6 +120,7 @@ class DbusGoeChargerService:
   
 #Set-Funktion für API v2 *****
   def _setGoeChargerValue(self, parameter, value):
+    print("setGoeChargerValue")
     config = self._getConfig()
     accessType = config['DEFAULT']['AccessType']
     print("Funktion aufgerufen")
@@ -134,6 +148,7 @@ class DbusGoeChargerService:
     
  
   def _getGoeChargerData(self):
+    print("getGoeChargerData")
     URL = self._getGoeChargerStatusUrl()
     request_data = requests.get(url = URL)
     
@@ -142,7 +157,8 @@ class DbusGoeChargerService:
         raise ConnectionError("No response from go-eCharger - %s" % (URL))
     
     json_data = request_data.json()     
-    time.sleep(1)
+    #time.sleep(1)
+    print("sleeping is pointless")
     # check for Json
     if not json_data:
         raise ValueError("Converting response to JSON failed")
@@ -158,10 +174,12 @@ class DbusGoeChargerService:
     logging.info("--- End: sign of life ---")
     return True
  
-  def _update(self):   
+  def _update(self):
+    print("update")   
     try:
        #get data from go-eCharger
        data = self._getGoeChargerData()
+       print("update got charger data")   
        
        #send data to DBus
        self._dbusservice['/Ac/L1/Power'] = int(data['nrg'][7] * 0.01 * 100)
@@ -174,6 +192,7 @@ class DbusGoeChargerService:
        self._dbusservice['/StartStop'] = int(data['alw'])
        self._dbusservice['/SetCurrent'] = int(data['amp'])
        self._dbusservice['/MaxCurrent'] = int(data['ama'])
+       print("updated dbus")   
  
        # update chargingTime, increment charge time only on active charging (2), reset when no car connected (1)
        timeDelta = time.time() - self._lastUpdate
@@ -185,6 +204,7 @@ class DbusGoeChargerService:
 
        self._dbusservice['/Mode'] = int(lademodus_to_victron(data['lmo']))  # 0=Manual, no control 1=Automatic
 
+       print("updated dbus2")   
        config = self._getConfig()
        hardwareVersion = int(config['DEFAULT']['HardwareVersion'])
 
@@ -199,21 +219,25 @@ class DbusGoeChargerService:
        elif int(data['car']) == 4:
          status = 3
        self._dbusservice['/Status'] = status
+       print("updated dbus3")
 
        #logging
        logging.debug("Wallbox Consumption (/Ac/Power): %s" % (self._dbusservice['/Ac/Power']))
        logging.debug("Wallbox Forward (/Ac/Energy/Forward): %s" % (self._dbusservice['/Ac/Energy/Forward']))
        logging.debug("---")
+       print("update logged")
        
        # increment UpdateIndex - to show that new data is available
        index = self._dbusservice['/UpdateIndex'] + 1  # increment index
        if index > 255:   # maximum value of the index
          index = 0       # overflow from 255 to 0
        self._dbusservice['/UpdateIndex'] = index
+       print("updated updateIndex")
 
        #update lastupdate vars
-       self._lastUpdate = time.time()              
+       self._lastUpdate = time.time()
     except Exception as e:
+       print("Update exception '%s'" % (e))
        logging.critical('Error at %s', '_update', exc_info=e)
        
     # return true, otherwise add_timeout will be removed from GObject - see docs http://library.isr.ist.utl.pt/docs/pygtk2reference/gobject-functions.html#function-gobject--timeout-add
@@ -221,7 +245,7 @@ class DbusGoeChargerService:
  
   def _handlechangedvalue(self, path, value):
     logging.info("someone else updated %s to %s" % (path, value))
-    print("handlechangedvalue aufgerufen")
+    print("handlechangedvalue")
     if path == '/SetCurrent':
       return self._setGoeChargerValue('amp', value)
     elif path == '/StartStop':
@@ -258,6 +282,7 @@ def forcestate_to_goe(goe_wert):
 
 def main():
   #configure logging
+  print("main")
   logging.basicConfig(      format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S',
                             level=logging.INFO,
@@ -265,7 +290,6 @@ def main():
                                 logging.FileHandler("%s/current.log" % (os.path.dirname(os.path.realpath(__file__)))),
                                 logging.StreamHandler()
                             ])
- 
   try:
       logging.info("Start")
   
@@ -298,13 +322,16 @@ def main():
           '/MaxCurrent': {'initial': 0, 'textformat': _a},
           '/StartStop': {'initial': 0, 'textformat': lambda p, v: (str(v))},
           '/Mode': {'initial': 0, 'textformat': lambda p, v: (str(v))},
+          #'/AutoStart': {'initial': 0, 'textformat': lambda p, v: (str(v))},
+          #'/EnableDisplay': {'initial': 0, 'textformat': lambda p, v: (str(v))},
 	}
         )
      
       logging.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')
       mainloop = gobject.MainLoop()
-      mainloop.run()            
+      mainloop.run()
   except Exception as e:
     logging.critical('Error at %s', 'main', exc_info=e)
 if __name__ == "__main__":
-  main()
+ 
+   main()
