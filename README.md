@@ -37,9 +37,3 @@ Within the project there is a file `/data/dbus-goecharger/config.ini` - just cha
 | DEFAULT  | SignOfLifeLog  | Time in minutes how often a status is added to the log-file `current.log` with log-level INFO |
 | DEFAULT  | Deviceinstance | Unique ID identifying the goECharger in Venus OS |
 | ONPREMISE  | Host | IP or hostname of on-premise goECharger |
-
-
-## Usefull links
-- https://github.com/goecharger/go-eCharger-API-v1
-- https://github.com/victronenergy/dbus_modbustcp/blob/master/CCGX-Modbus-TCP-register-list.xlsx
-- https://github.com/trixing/venus.dbus-twc3
