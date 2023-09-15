@@ -81,10 +81,11 @@ class DbusGoeChargerService:
     self._chargingTime = 0.0
 
     # add _update function 'timer'
-    gobject.timeout_add(2500, self._update) # pause 2500ms before the next request
+    gobject.timeout_add(5000, self._update) # pause 2500ms before the next request
     
     # add _signOfLife 'timer' to get feedback in log every 5minutes
-    gobject.timeout_add(self._getSignOfLifeInterval()*60*1000, self._signOfLife)
+#    gobject.timeout_add(self._getSignOfLifeInterval()*60*1000, self._signOfLife)
+    gobject.timeout_add(1*60*1000, self._signOfLife)
     
   def _getConfig(self):
     global globalConfig     
@@ -120,6 +121,7 @@ class DbusGoeChargerService:
   
 #Set-Funktion für API v2 *****
   def _setGoeChargerValue(self, parameter, value):
+    print("------------------")
     print("setGoeChargerValue")
     config = self._getConfig()
     accessType = config['DEFAULT']['AccessType']
@@ -150,15 +152,22 @@ class DbusGoeChargerService:
   def _getGoeChargerData(self):
     print("getGoeChargerData")
     URL = self._getGoeChargerStatusUrl()
-    request_data = requests.get(url = URL)
+    print("getGoeChargerData URL")
+    try:
+        request_data = requests.get(url = URL, timeout=4)
+        print("getGoeChargerData got")
+    except Exception as e:
+       print("getGoeChargerData exception '%s'" % (e))
+       logging.critical('Error at %s', '_update', exc_info=e)
     
     # check for response
     if not request_data:
         raise ConnectionError("No response from go-eCharger - %s" % (URL))
     
+    print("getGoeChargerData parse json")
     json_data = request_data.json()     
     #time.sleep(1)
-    print("sleeping is pointless")
+    print("sleeping here is pointless")
     # check for Json
     if not json_data:
         raise ValueError("Converting response to JSON failed")
